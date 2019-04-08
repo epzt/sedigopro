@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/sedigopro" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>
