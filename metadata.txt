@@ -16,8 +16,8 @@ email=emmanuel.poizot@lecnam.net
 
 about=Manage image remotly capture by a GoPro camera.
 
-tracker=http://bugs
-repository=http://repo
+tracker=https://github.com/epzt/sedigopro/issues
+repository=https://github.com/epzt/sedigopro
 # End of mandatory metadata
 
 # Recommended items:
@@ -28,7 +28,7 @@ repository=http://repo
 # Tags are comma separated with spaces allowed
 tags=python
 
-homepage=http://homepage
+homepage=http://www.geoceano.fr
 category=Plugins
 icon=icon.png
 # experimental flag
