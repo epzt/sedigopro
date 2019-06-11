@@ -28,7 +28,7 @@ import time
 
 from PyQt5 import uic
 from PyQt5 import QtWidgets, QtGui, QtCore
-
+from qgis.core import QgsApplication
 from goprocam import GoProCamera, constants
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
@@ -37,12 +37,13 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 GOPROVIEWHEIGHT = 300
 GOPROVIEWWIDTH = 400
-GOPROULVIEWPOS = QtCore.QPointF(5,4)
-GOPROURVIEWPOS = QtCore.QPointF(GOPROVIEWWIDTH-90,4)
-GOPROLLVIEWPOS = QtCore.QPointF(5,GOPROVIEWHEIGHT-24)
-GOPROLRVIEWPOS = QtCore.QPointF(GOPROVIEWWIDTH-90,GOPROVIEWHEIGHT-24)
+GOPROULVIEWPOS = QtCore.QPointF(4,4)
+GOPROURVIEWPOS = QtCore.QPointF(GOPROVIEWWIDTH-4,4)
+GOPROLLVIEWPOS = QtCore.QPointF(5,GOPROVIEWHEIGHT-4)
+GOPROLRVIEWPOS = QtCore.QPointF(GOPROVIEWWIDTH-4,GOPROVIEWHEIGHT-4)
 CENTER = QtCore.QPoint(200,150)
-PREFIX100GOPRO = "100GOPRO-"
+# Adapt this value to your GOPRO camera type
+GOPROPREFIX = "100GOPRO-"
 
 class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
     def __init__(self, parent=None):
@@ -53,6 +54,7 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         # self.<objectname>, and you can use autoconnect slots - see
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
+        self.parentApp = parent
         self.setupUi(self)
 
         self.gopro = False
@@ -67,23 +69,27 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         #self.prefixImageName = ""
         self.textTagColor = "" 
         self.setTagTextColorBlack()
+        self.GPSInfo = False
+        self.defaultPrefix = "100GOPRO-"
 
         self.setWorkingDirectoryButton.setEnabled(True)
         self.getGoProImageButton.setEnabled(False)
         self.tagImageButton.setEnabled(False)
         self.saveImageButton.setEnabled(False)
         self.setGoProOffButton.setEnabled(False)
-        #self.setGoProOnButton.setEnabled(False)
+        self.setGoProOnButton.setEnabled(False)
+        self.defaultPrefixLineEdit.setText(self.defaultPrefix)
         
         self.connectGoProCameraButton.clicked.connect(self.connectGoProCamera)
         self.setWorkingDirectoryButton.clicked.connect(self.setWorkingDirectory)
         self.getGoProImageButton.clicked.connect(self.getGoProImage)
         self.setGoProOffButton.clicked.connect(self.setGoProOff)
-        #self.setGoProOnButton.clicked.connect(self.setGoProOn)
+        self.setGoProOnButton.clicked.connect(self.connectGoProCamera)
         self.tagImageButton.clicked.connect(self.setTagImage)
         self.whiteTagTextButton.clicked.connect(self.setTagTextColorWhite)
         self.blackTagTextButton.clicked.connect(self.setTagTextColorBlack)
         self.saveImageButton.clicked.connect(self.saveImage)
+        self.defaultPrefixLineEdit.textEdited.connect(self.defaultPrefixChanged)
 
     def connectGoProCamera(self):
         self.gopro = GoProCamera.GoPro()
@@ -96,7 +102,14 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
             self.tagImageButton.setEnabled(True)
             self.saveImageButton.setEnabled(True)
             self.setGoProOffButton.setEnabled(True)
-            #self.setGoProOnButton.setEnabled(True)
+            self.setGoProOnButton.setEnabled(False)
+            
+            connectionRegistry = QgsApplication.gpsConnectionRegistry()
+            connectionList = connectionRegistry.connectionList()
+            if len(connectionList) > 0:
+               self.GPSInfo = connectionList[0].currentGPSInformation()
+            else:
+               QtGui.QMessageBox.warning(self,"GPS information","Can\'t load GPS information")
     
     def setWorkingDirectory(self):
         self.workingDir = QtGui.QFileDialog.getExistingDirectory(self, self.workingDir, "Select working directory...", QtGui.QFileDialog.ShowDirsOnly)
@@ -116,17 +129,21 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         self.gopro.downloadLastMedia(self.gopro.take_photo())
         # Save the name of the last picture and update GUI
         imgName = self.gopro.getMediaInfo("file")
-        self.prefixTextTagLineEdit.setText("{}{}".format(PREFIX100GOPRO,imgName.split(".")[0]))
-        lastImageName = "{}{}".format(PREFIX100GOPRO,imgName)
+        # Construct the name of the file as it is download in current location (with default GOPRO prefix
+        lastImageName = f'{GOPROPREFIX}{imgName}'
+        # Rename the file with user defined prefix
+        os.rename(lastImageName, f'{self.defaultPrefix}{imgName}')
+        # Set the current file name with user prefix
+        lastImageName = f'{self.defaultPrefix}{imgName}'
         # Update GUI for saving purpose
-        self.imageNameLineEdit.setText("{}{}".format(PREFIX100GOPRO,imgName.split(".")[0]))
+        self.prefixTextTagLineEdit.setText(lastImageName.split(".")[0])
+        self.imageNameLineEdit.setText(lastImageName.split(".")[0])
         # Delete last picture from GoPro
         self.gopro.delete("last")
         # Get the battery level and update the GUI
         batteryLevel = self.gopro.getStatus(constants.Status.Status, constants.Status.STATUS.BatteryLevel) 
         self.batterySlider.setValue(int(batteryLevel * 33.33))
         # Draw the image
-        print(lastImageName)
         self.drawGoProImage(lastImageName)
 
     def setGoProOff(self):
@@ -136,6 +153,7 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         self.getGoProImageButton.setEnabled(False)
         self.tagImageButton.setEnabled(False)
         self.saveImageButton.setEnabled(False)
+        self.setGoProOnButton.setEnabled(True)
         
     def setGoProOn(self):
         self.drawGoProImage("/home/epoizot/100GOPRO-GOPR2161.JPG")
@@ -195,16 +213,35 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         textitem = QtGui.QGraphicsTextItem(self.getNewFileNameImage(texttag))
         textitem.setParent(self.imageGoProViewer)
         textitem.setDefaultTextColor(QtGui.QColor(self.textTagColor))
+        # item for GNSS tag information
+        if self.GPSInfo:
+            positionTag = f'G: {0:3.6f}\nL: {0:2.6f}'.format(self.GPSInfo.longitude,self.GPSInfo.latitude)
+            positionItem = QtGui.QGraphicsTextItem(positionTag)
+        else:
+            positionTag = "G: XXX.XXXXXX\nL: XX.XXXXXX"
+            positionItem = QtGui.QGraphicsTextItem(positionTag)
+        # Current text settings
+        positionItem.setParent(self.imageGoProViewer)
+        positionItem.setDefaultTextColor(QtGui.QColor(self.textTagColor))
         # Place the text at the define place
+        textWidth = textitem.document().size().width()
+        positionTextWidth = positionItem.document().size().width()
+        textHeight = textitem.document().size().height()
+        positionTextHeight = positionItem.document().size().height()
         if self.llRadioButton.isChecked():
-            textitem.setPos(GOPROLLVIEWPOS)
+            textitem.setPos(GOPROLLVIEWPOS-QtCore.QPointF(0,textHeight))
+            positionItem.setPos(GOPROULVIEWPOS)
         elif self.lrRadioButton.isChecked():
-            textitem.setPos(GOPROLRVIEWPOS)
+            textitem.setPos(GOPROLRVIEWPOS-QtCore.QPointF(textWidth,textHeight))
+            positionItem.setPos(GOPROURVIEWPOS-QtCore.QPointF(positionTextWidth,0))
         elif self.urRadioButton.isChecked():
-            textitem.setPos(GOPROURVIEWPOS)
+            textitem.setPos(GOPROURVIEWPOS-QtCore.QPointF(textWidth,0))
+            positionItem.setPos(GOPROLRVIEWPOS-QtCore.QPointF(positionTextWidth,positionTextHeight))
         elif self.ulRadioButton.isChecked():
             textitem.setPos(GOPROULVIEWPOS)
+            positionItem.setPos(GOPROLLVIEWPOS-QtCore.QPointF(0,positionTextHeight))
         scene.addItem(textitem)
+        scene.addItem(positionItem)
         # When tagged, proposal of a new file name
         self.imageNameLineEdit.setText(self.getNewFileNameImage(texttag))
         #textitem.setParent(self.imageGoProViewer)
@@ -227,5 +264,8 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         painter.end()
         # Save the image to a file.
         image.save(f'{self.imageNameLineEdit.text()}.JPG', "jpg")
+
+    def defaultPrefixChanged(self, newText):
+        self.defaultPrefix = f'{newText}-'
 
         
