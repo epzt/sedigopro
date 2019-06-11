@@ -67,8 +67,8 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         else:
             QtGui.QMessageBox.information(self,"Error",f'Can\'t change to {self.workingDir}')   
         #self.prefixImageName = ""
-        self.textTagColor = "" 
-        self.setTagTextColorBlack()
+        self.textTagColor = QtCore.Qt.black
+        self.setTagTextColor(self.textTagColor)
         self.GPSInfo = False
         self.defaultPrefix = "100GOPRO-"
 
@@ -90,6 +90,7 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         self.blackTagTextButton.clicked.connect(self.setTagTextColorBlack)
         self.saveImageButton.clicked.connect(self.saveImage)
         self.defaultPrefixLineEdit.textEdited.connect(self.defaultPrefixChanged)
+        self.otherColorButton.clicked.connect(self.setTextColor)
 
     def connectGoProCamera(self):
         self.gopro = GoProCamera.GoPro()
@@ -179,14 +180,20 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         pixmap = pixmap.scaled(GOPROVIEWWIDTH,GOPROVIEWHEIGHT,QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
         scene.addPixmap(pixmap)
         self.imageGoProViewer.setScene(scene)
-    
+
+    def setTagTextColor(self, _color):
+        self.textTagColor = _color
+        palette = self.currentColorButton.palette()
+        palette.setColor(QtGui.QPalette.Button, QtGui.QColor(_color))
+        self.currentColorButton.setPalette(palette)
+
     def setTagTextColorWhite(self):
-        self.textTagColor = "white"
-        self.textTagColorLabel.setText(f'Set text color: {self.textTagColor.upper()}')
+        self.textTagColor = QtCore.Qt.white
+        self.setTagTextColor(self.textTagColor)
 
     def setTagTextColorBlack(self):
-        self.textTagColor = "black"
-        self.textTagColorLabel.setText(f'Set text color: {self.textTagColor.upper()}')
+        self.textTagColor = QtCore.Qt.black
+        self.setTagTextColor(self.textTagColor)
 
     def getNewFileNameImage(self,prefix):
         # get the number at the spinbox and construc the new name
@@ -267,5 +274,11 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
 
     def defaultPrefixChanged(self, newText):
         self.defaultPrefix = f'{newText}-'
+
+    def setTextColor(self):
+        colDiag = QtWidgets.QColorDialog(self)
+        if colDiag.exec_():
+            self.textTagColor = colDiag.currentColor()
+            self.setTagTextColor(self.textTagColor)
 
         
