@@ -104,13 +104,6 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
             self.saveImageButton.setEnabled(True)
             self.setGoProOffButton.setEnabled(True)
             self.setGoProOnButton.setEnabled(False)
-            
-            connectionRegistry = QgsApplication.gpsConnectionRegistry()
-            connectionList = connectionRegistry.connectionList()
-            if len(connectionList) > 0:
-               self.GPSInfo = connectionList[0].currentGPSInformation()
-            else:
-               QtWidgets.QMessageBox.warning(self,"GPS information","Can\'t load GPS information")
     
     def setWorkingDirectory(self):
         self.workingDir = QtWidgets.QFileDialog.getExistingDirectory(self, self.workingDir, "Select working directory...", QtWidgets.QFileDialog.ShowDirsOnly)
@@ -146,6 +139,13 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         self.batterySlider.setValue(int(batteryLevel * 33.33))
         # Draw the image
         self.drawGoProImage(lastImageName)
+        # Get GNSS info to tag position on the picture
+        connectionRegistry = QgsApplication.gpsConnectionRegistry()
+        connectionList = connectionRegistry.connectionList()
+        if len(connectionList) > 0:
+            self.GPSInfo = connectionList[0].currentGPSInformation()
+        else:
+            QtWidgets.QMessageBox.warning(self, "GPS information", "Can\'t load GPS information")
 
     def setGoProOff(self):
         self.gopro.power_off()
@@ -222,7 +222,9 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         textitem.setDefaultTextColor(QtGui.QColor(self.textTagColor))
         # item for GNSS tag information
         if self.GPSInfo:
-            positionTag = f'G: {0:3.6f}\nL: {0:2.6f}'.format(self.GPSInfo.longitude,self.GPSInfo.latitude)
+            print(f'G: {self.GPSInfo.longitude} L: {self.GPSInfo.latitude}')
+            positionTag = 'G: {0:.6f}\n'.format(float(self.GPSInfo.longitude))
+            positionTag += 'L: {0:.6f}'.format(float(self.GPSInfo.latitude))
             positionItem = QtWidgets.QGraphicsTextItem(positionTag)
         else:
             positionTag = "G: XXX.XXXXXX\nL: XX.XXXXXX"
