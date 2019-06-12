@@ -65,7 +65,7 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
             os.chdir(self.workingDir)
             self.currentDirectoryLabel.setText(self.workingDir)
         else:
-            QtGui.QMessageBox.information(self,"Error",f'Can\'t change to {self.workingDir}')   
+            QtWidgets.QMessageBox.information(self,"Error",f'Can\'t change to {self.workingDir}')
         #self.prefixImageName = ""
         self.textTagColor = QtCore.Qt.black
         self.setTagTextColor(self.textTagColor)
@@ -110,17 +110,17 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
             if len(connectionList) > 0:
                self.GPSInfo = connectionList[0].currentGPSInformation()
             else:
-               QtGui.QMessageBox.warning(self,"GPS information","Can\'t load GPS information")
+               QtWidgets.QMessageBox.warning(self,"GPS information","Can\'t load GPS information")
     
     def setWorkingDirectory(self):
-        self.workingDir = QtGui.QFileDialog.getExistingDirectory(self, self.workingDir, "Select working directory...", QtGui.QFileDialog.ShowDirsOnly)
+        self.workingDir = QtWidgets.QFileDialog.getExistingDirectory(self, self.workingDir, "Select working directory...", QtWidgets.QFileDialog.ShowDirsOnly)
         self.currentDirectoryLabel.setText(self.workingDir)
         # Check if New path exists
         if os.path.exists(self.workingDir) :
             # Change the current working Directory    
             os.chdir(self.workingDir)
         else:
-            QtGui.QMessageBox.information(self,"Error",f'Can\'t change to {self.workingDir}')   
+            QtWidgets.QMessageBox.information(self,"Error",f'Can\'t change to {self.workingDir}')
 
     def getGoProImage(self):
         # Erase previous name if any
@@ -168,14 +168,14 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         #self.batterySlider.setValue(int(batteryLevel * 33.33))
       
     def getGoProCameraInfo(self):
-        QtGui.QMessageBox.information(self,"GoPro information",self.gopro.overview())
+        QtWidgets.QMessageBox.information(self,"GoPro information",self.gopro.overview())
     
     def getImageName(self):
         if self.imageNameLineEdit != self.prefixTextTagLineEdit.text():
             return
 
     def drawGoProImage(self,fname):
-        scene = QtGui.QGraphicsScene()
+        scene = QtWidgets.QGraphicsScene()
         pixmap = QtGui.QPixmap(fname)
         pixmap = pixmap.scaled(GOPROVIEWWIDTH,GOPROVIEWHEIGHT,QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
         scene.addPixmap(pixmap)
@@ -208,25 +208,25 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         texttag = self.prefixTextTagLineEdit.text()
         # Verification of the existence of the new file name
         if self.isNewFileNameImageExist(self.getNewFileNameImage(texttag)):
-            QtGui.QMessageBox.critical(self,"Error",f'File {self.getNewFileNameImage(texttag)} exist.')
+            QtWidgets.QMessageBox.critical(self,"Error",f'File {self.getNewFileNameImage(texttag)} exist.')
             return
         # Get image item, considering it's the only one on the centre of the view
         item = self.imageGoProViewer.itemAt(CENTER)
-        scene = QtGui.QGraphicsScene()
+        scene = QtWidgets.QGraphicsScene()
         scene.setSceneRect(self.imageGoProViewer.sceneRect())
         # Add the image to the scene
         scene.addItem(item)
         self.imageGoProViewer.setScene(scene)
-        textitem = QtGui.QGraphicsTextItem(self.getNewFileNameImage(texttag))
+        textitem = QtWidgets.QGraphicsTextItem(self.getNewFileNameImage(texttag))
         textitem.setParent(self.imageGoProViewer)
         textitem.setDefaultTextColor(QtGui.QColor(self.textTagColor))
         # item for GNSS tag information
         if self.GPSInfo:
             positionTag = f'G: {0:3.6f}\nL: {0:2.6f}'.format(self.GPSInfo.longitude,self.GPSInfo.latitude)
-            positionItem = QtGui.QGraphicsTextItem(positionTag)
+            positionItem = QtWidgets.QGraphicsTextItem(positionTag)
         else:
             positionTag = "G: XXX.XXXXXX\nL: XX.XXXXXX"
-            positionItem = QtGui.QGraphicsTextItem(positionTag)
+            positionItem = QtWidgets.QGraphicsTextItem(positionTag)
         # Current text settings
         positionItem.setParent(self.imageGoProViewer)
         positionItem.setDefaultTextColor(QtGui.QColor(self.textTagColor))
@@ -256,10 +256,10 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
     def saveImage(self):
         # Do some checking before saving the file
         if not self.imageNameLineEdit.text():
-            QtGui.QMessageBox.critical(self,"Error","Enter a file name to save.")
+            QtWidgets.QMessageBox.critical(self,"Error","Enter a file name to save.")
             return
         if self.isNewFileNameImageExist(f'{self.imageNameLineEdit.text()}.JPG'):
-            QtGui.QMessageBox.critical(self,"Error",f'File {self.imageNameLineEdit.text()}.JPG exist.')
+            QtWidgets.QMessageBox.critical(self,"Error",f'File {self.imageNameLineEdit.text()}.JPG exist.')
             return
         # Get region of scene to capture.
         area = self.imageGoProViewer.sceneRect()
