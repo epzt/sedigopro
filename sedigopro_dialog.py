@@ -70,7 +70,8 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         self.textTagColor = QtCore.Qt.black
         self.setTagTextColor(self.textTagColor)
         self.GPSInfo = False
-        self.defaultPrefix = "100GOPRO-"
+        self.defaultPrefix = GOPROPREFIX
+        self.currentPosition = [0.0,0.0]
 
         self.setWorkingDirectoryButton.setEnabled(True)
         self.getGoProImageButton.setEnabled(False)
@@ -91,6 +92,7 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         self.saveImageButton.clicked.connect(self.saveImage)
         self.defaultPrefixLineEdit.textEdited.connect(self.defaultPrefixChanged)
         self.otherColorButton.clicked.connect(self.setTextColor)
+        self.currentPositionButton.clicked.connect(self.getCurrentPosition)
 
     def connectGoProCamera(self):
         self.gopro = GoProCamera.GoPro()
@@ -135,18 +137,19 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         # Delete last picture from GoPro
         self.gopro.delete("last")
         # Get the battery level and update the GUI
-        batteryLevel = self.gopro.getStatus(constants.Status.Status, constants.Status.STATUS.BatteryLevel) 
-        self.batterySlider.setValue(int(batteryLevel * 33.33))
+        self.updateBatteryLevel()
         # Draw the image
         self.drawGoProImage(lastImageName)
         # Get GNSS info to tag position on the picture
+        self.getCurrentPosition()
+        '''
         connectionRegistry = QgsApplication.gpsConnectionRegistry()
         connectionList = connectionRegistry.connectionList()
         if len(connectionList) > 0:
             self.GPSInfo = connectionList[0].currentGPSInformation()
         else:
             QtWidgets.QMessageBox.warning(self, "GPS information", "Can\'t load GPS information")
-
+        '''
     def setGoProOff(self):
         self.gopro.power_off()
         self.connectionStatusLabel.setStyleSheet("QLabel {color: red}")
@@ -164,8 +167,7 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         self.tagImageButton.setEnabled(True)
         self.saveImageButton.setEnabled(True)
         # Get the battery level and update the GUI
-        #batteryLevel = self.gopro.getStatus(constants.Status.Status, constants.Status.STATUS.BatteryLevel) 
-        #self.batterySlider.setValue(int(batteryLevel * 33.33))
+        self.updateBatteryLevel()
       
     def getGoProCameraInfo(self):
         QtWidgets.QMessageBox.information(self,"GoPro information",self.gopro.overview())
@@ -221,14 +223,11 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         textitem.setParent(self.imageGoProViewer)
         textitem.setDefaultTextColor(QtGui.QColor(self.textTagColor))
         # item for GNSS tag information
-        if self.GPSInfo:
-            print(f'G: {self.GPSInfo.longitude} L: {self.GPSInfo.latitude}')
-            positionTag = 'G: {0:.6f}\n'.format(float(self.GPSInfo.longitude))
-            positionTag += 'L: {0:.6f}'.format(float(self.GPSInfo.latitude))
-            positionItem = QtWidgets.QGraphicsTextItem(positionTag)
-        else:
-            positionTag = "G: XXX.XXXXXX\nL: XX.XXXXXX"
-            positionItem = QtWidgets.QGraphicsTextItem(positionTag)
+        print(f'G: {self.currentPosition[0]} L: {self.currentPosition[1]}')
+        positionTag = 'G: {0:.6f}\n'.format(float(self.currentPosition[0]))
+        positionTag += 'L: {0:.6f}'.format(float(self.currentPosition[1]))
+        positionItem = QtWidgets.QGraphicsTextItem(positionTag)
+
         # Current text settings
         positionItem.setParent(self.imageGoProViewer)
         positionItem.setDefaultTextColor(QtGui.QColor(self.textTagColor))
@@ -283,4 +282,19 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
             self.textTagColor = colDiag.currentColor()
             self.setTagTextColor(self.textTagColor)
 
+    def updateBatteryLevel(self):
+        # Get the battery level and update the GUI
+        batteryLevel = self.gopro.getStatus(constants.Status.Status, constants.Status.STATUS.BatteryLevel)
+        print(batteryLevel)
+        self.batteryProgressBar.setValue(int(batteryLevel * 100/3))
+
+    def getCurrentPosition(self):
+        # Get GNSS info to tag position on the picture
+        connectionRegistry = QgsApplication.gpsConnectionRegistry()
+        connectionList = connectionRegistry.connectionList()
+        if len(connectionList) > 0:
+            self.GPSInfo = connectionList[0].currentGPSInformation()
+            self.currentPosition = [self.GPSInfo.longitude, self.GPSInfo.latitude]
+        else:
+            QtWidgets.QMessageBox.warning(self, "GPS information", "Can\'t load GPS information")
         

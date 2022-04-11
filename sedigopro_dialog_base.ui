@@ -535,38 +535,6 @@
     </property>
    </widget>
   </widget>
-  <widget class="QSplitter" name="splitter">
-   <property name="geometry">
-    <rect>
-     <x>450</x>
-     <y>180</y>
-     <width>141</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="orientation">
-    <enum>Qt::Horizontal</enum>
-   </property>
-   <widget class="QSlider" name="batterySlider">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="maximum">
-     <number>100</number>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
-    </property>
-   </widget>
-   <widget class="QSpinBox" name="spinBox">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="maximum">
-     <number>100</number>
-    </property>
-   </widget>
-  </widget>
   <widget class="QPushButton" name="setGoProOffButton">
    <property name="geometry">
     <rect>
@@ -594,6 +562,32 @@
    </property>
    <property name="text">
     <string>On</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="currentPositionButton">
+   <property name="geometry">
+    <rect>
+     <x>450</x>
+     <y>220</y>
+     <width>127</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Get current position</string>
+   </property>
+  </widget>
+  <widget class="QProgressBar" name="batteryProgressBar">
+   <property name="geometry">
+    <rect>
+     <x>450</x>
+     <y>180</y>
+     <width>141</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="value">
+    <number>24</number>
    </property>
   </widget>
  </widget>
@@ -628,22 +622,6 @@
     <hint type="destinationlabel">
      <x>20</x>
      <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>batterySlider</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>spinBox</receiver>
-   <slot>setValue(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>511</x>
-     <y>209</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>554</x>
-     <y>217</y>
     </hint>
    </hints>
   </connection>
