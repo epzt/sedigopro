@@ -24,10 +24,7 @@
 
 import os
 
-import time
-
-from PyQt5 import uic
-from PyQt5 import QtWidgets, QtGui, QtCore
+from PyQt5 import uic, QtWidgets, QtGui, QtCore
 from qgis.core import QgsApplication
 from goprocam import GoProCamera, constants
 
@@ -72,6 +69,7 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         self.GPSInfo = False
         self.defaultPrefix = GOPROPREFIX
         self.currentPosition = [0.0,0.0]
+        self.batteryProgressBar.setValue(0)
 
         self.setWorkingDirectoryButton.setEnabled(True)
         self.getGoProImageButton.setEnabled(False)
@@ -93,10 +91,16 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         self.defaultPrefixLineEdit.textEdited.connect(self.defaultPrefixChanged)
         self.otherColorButton.clicked.connect(self.setTextColor)
         self.currentPositionButton.clicked.connect(self.getCurrentPosition)
-
+        self.numImageSpinBox.valueChanged.connect(self.numSpinBoxValueChanged)
+        self.setImageFileNameButton.clicked.connect(self.setFileImageName)
     def connectGoProCamera(self):
-        self.gopro = GoProCamera.GoPro()
-        if self.gopro:
+        self.setCursor(QtCore.Qt.WaitCursor)
+        try:
+            self.gopro = GoProCamera.GoPro()
+        except:
+            QtWidgets.QMessageBox.warning(self,"GoPro information","Enable to connect to GoPro camera")
+            return
+        if self.gopro.getStatusRaw(): # Try to get something from the camera if connected fine
             self.connectionStatusLabel.setStyleSheet("QLabel {color: green}")
             self.connectionStatusLabel.setText("CONNECTED")
             self.gopro.mode(constants.Mode.PhotoMode)
@@ -106,16 +110,21 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
             self.saveImageButton.setEnabled(True)
             self.setGoProOffButton.setEnabled(True)
             self.setGoProOnButton.setEnabled(False)
-    
+            self.updateBatteryLevel()
+        else:
+            QtWidgets.QMessageBox.warning(self,"GoPro information","Enable to connect to GoPro camera")
+        self.setCursor(QtCore.Qt.ArrowCursor)
+
     def setWorkingDirectory(self):
         self.workingDir = QtWidgets.QFileDialog.getExistingDirectory(self, self.workingDir, "Select working directory...", QtWidgets.QFileDialog.ShowDirsOnly)
-        self.currentDirectoryLabel.setText(self.workingDir)
-        # Check if New path exists
-        if os.path.exists(self.workingDir) :
-            # Change the current working Directory    
-            os.chdir(self.workingDir)
-        else:
-            QtWidgets.QMessageBox.information(self,"Error",f'Can\'t change to {self.workingDir}')
+        if self.workingDir:
+            # Check if New path exists
+            if os.path.exists(self.workingDir):
+                # Change the current working Directory
+                os.chdir(self.workingDir)
+                self.currentDirectoryLabel.setText(self.workingDir)
+            else:
+                QtWidgets.QMessageBox.information(self, "Error", f'Can\'t change to {self.workingDir}')
 
     def getGoProImage(self):
         # Erase previous name if any
@@ -158,7 +167,7 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         self.tagImageButton.setEnabled(False)
         self.saveImageButton.setEnabled(False)
         self.setGoProOnButton.setEnabled(True)
-        
+        self.batteryProgressBar.setValue(0)
     def setGoProOn(self):
         self.drawGoProImage("/home/epoizot/100GOPRO-GOPR2161.JPG")
         #self.gopro.power_on()
@@ -253,7 +262,10 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         # When tagged, proposal of a new file name
         self.imageNameLineEdit.setText(self.getNewFileNameImage(texttag))
         #textitem.setParent(self.imageGoProViewer)
-        
+
+    def setFileImageName(self):
+        self.imageNameLineEdit.setText(self.prefixTextTagLineEdit.text())
+
     def saveImage(self):
         # Do some checking before saving the file
         if not self.imageNameLineEdit.text():
@@ -274,7 +286,14 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
         image.save(f'{self.imageNameLineEdit.text()}.JPG', "jpg")
 
     def defaultPrefixChanged(self, newText):
-        self.defaultPrefix = f'{newText}-'
+        self.defaultPrefix = newText
+        self.prefixTextChanged(newText)
+
+    def prefixTextChanged(self, newText):
+        self.prefixTextTagLineEdit.setText("{}{:04d}".format(newText, self.numImageSpinBox.value()))
+
+    def numSpinBoxValueChanged(self, newValue):
+        self.prefixTextTagLineEdit.setText("{}{:04d}".format(self.defaultPrefix, newValue))
 
     def setTextColor(self):
         colDiag = QtWidgets.QColorDialog(self)
@@ -285,8 +304,10 @@ class sediGoProDialog(QtWidgets.QDialog, FORM_CLASS):
     def updateBatteryLevel(self):
         # Get the battery level and update the GUI
         batteryLevel = self.gopro.getStatus(constants.Status.Status, constants.Status.STATUS.BatteryLevel)
-        print(batteryLevel)
-        self.batteryProgressBar.setValue(int(batteryLevel * 100/3))
+        if batteryLevel:
+            self.batteryProgressBar.setValue(int(batteryLevel * 100/3))
+        else:
+            self.batteryProgressBar.setValue(0)
 
     def getCurrentPosition(self):
         # Get GNSS info to tag position on the picture
